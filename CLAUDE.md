@@ -16,8 +16,8 @@ underspecified.
 
 ## Current state: V1.0 (Data phase only)
 
-Only `collector/` is implemented and tested. `quant/`, `ai/`, `dashboard/`,
-`scheduler/` are stubs — each has a README describing what it will do and what
+`collector/` and `quant/` (factors + stage-1 scoring) are implemented and tested.
+`ai/`, `dashboard/`, `scheduler/` are stubs — each has a README describing what it will do and what
 it depends on. Don't assume code exists there; check the README first.
 
 There is no database server. All storage is parquet (the Jetson works with
@@ -31,6 +31,9 @@ source .venv/bin/activate
 
 python -m collector.financials TICKER [TICKER ...]    # fundamentals/ facts -> advisor/financials/
 python -m collector.market TICKER [...] --period 5y   # yfinance prices -> advisor/prices/
+
+python -m quant.factors [TICKER ...]                  # financials + prices -> advisor/metrics/
+python -m quant.scoring                               # metrics -> advisor/scores/
 
 pytest tests/
 ```

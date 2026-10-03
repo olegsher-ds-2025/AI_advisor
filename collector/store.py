@@ -20,6 +20,15 @@ def read_facts(symbol: str) -> pd.DataFrame | None:
     return pd.read_parquet(path) if path.exists() else None
 
 
+def read_symbol(dataset: str, symbol: str) -> pd.DataFrame | None:
+    path = symbol_path(DATA_DIR, dataset, symbol, f"{dataset}.parquet")
+    return pd.read_parquet(path) if path.exists() else None
+
+
+def list_symbols(dataset: str) -> list[str]:
+    return sorted(p.name.removeprefix("symbol=") for p in (DATA_DIR / dataset).glob("symbol=*"))
+
+
 def upsert_symbol(dataset: str, symbol: str, df: pd.DataFrame, keys: list[str]) -> Path:
     path = symbol_path(DATA_DIR, dataset, symbol, f"{dataset}.parquet")
     if path.exists():
