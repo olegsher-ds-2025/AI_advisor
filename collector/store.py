@@ -15,6 +15,10 @@ def symbol_path(root: Path, dataset: str, symbol: str, filename: str) -> Path:
     return root / dataset / f"symbol={symbol}" / filename
 
 
+def source_symbols() -> list[str]:
+    return sorted(p.name.removeprefix("symbol=") for p in (SOURCE_DIR / "fundamentals").glob("symbol=*"))
+
+
 def read_facts(symbol: str) -> pd.DataFrame | None:
     path = symbol_path(SOURCE_DIR, "fundamentals", symbol, "facts.parquet")
     return pd.read_parquet(path) if path.exists() else None
@@ -39,3 +43,9 @@ def upsert_symbol(dataset: str, symbol: str, df: pd.DataFrame, keys: list[str]) 
     df.to_parquet(tmp, index=False)
     tmp.replace(path)
     return path
+
+
+def read_news(symbol: str, days: int = 30) -> pd.DataFrame:
+    partitions = sorted((SOURCE_DIR / "news").glob("date=*"))[-days:]
+    frames = [pd.read_parquet(p / "items.parquet", filters=[("symbol", "==", symbol)]) for p in partitions]
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=["published_at", "headline"])

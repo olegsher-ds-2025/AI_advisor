@@ -4,4 +4,5 @@ yfinance>=0.2
 python-dotenv>=1.0
 lightgbm>=4.5
 scikit-learn>=1.5
+streamlit>=1.40
 pytest>=8

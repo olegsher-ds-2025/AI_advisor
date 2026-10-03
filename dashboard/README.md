@@ -1,7 +1,8 @@
-# dashboard/ (not yet implemented)
+# dashboard/
 
-Planned for V1.4: a Streamlit app (`app.py`) showing Top Quality/Growth/Value
-lists, biggest improvers/deteriorations, and a per-company drill-down (price,
-valuation, quality, growth, risk, momentum + AI research once `ai/` exists).
+Streamlit app: `streamlit run dashboard/app.py`.
 
-Depends on `quant/scoring.py` having populated the `scores` table.
+Lists tab: top quality / growth / value and the biggest 3-month improvers and
+deteriorations by total score, filterable by sector. Company tab: category scores, price,
+score history, latest factors and the AI research note if one exists. Equities only
+(ETFs are filtered via `advisor/universe/`).

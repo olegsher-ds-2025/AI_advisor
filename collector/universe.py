@@ -9,7 +9,7 @@ import argparse
 import pandas as pd
 import yfinance as yf
 
-from collector.store import DATA_DIR, SOURCE_DIR
+from collector.store import DATA_DIR, source_symbols
 
 PATH = DATA_DIR / "universe" / "universe.parquet"
 FIELDS = {"quoteType": "quote_type", "sector": "sector", "industry": "industry", "longName": "name"}
@@ -29,7 +29,7 @@ def fetch(symbol: str) -> dict:
 
 
 def run(symbols: list[str]):
-    symbols = symbols or sorted(p.name.removeprefix("symbol=") for p in (SOURCE_DIR / "fundamentals").glob("symbol=*"))
+    symbols = symbols or source_symbols()
     fresh = pd.DataFrame([fetch(s.upper()) for s in symbols])
     if PATH.exists():
         fresh = pd.concat([pd.read_parquet(PATH), fresh]).drop_duplicates("symbol", keep="last")

@@ -34,6 +34,12 @@ python -m collector.market TICKER [...] --period 5y   # yfinance prices -> advis
 
 python -m quant.factors [TICKER ...]                  # financials + prices -> advisor/metrics/
 python -m quant.scoring                               # metrics -> advisor/scores/
+python -m quant.model                                 # walk-forward LightGBM -> advisor/ml_scores/
+python -m quant.backtest --score total ml_score       # top-N backtest vs SPY/QQQ
+python -m collector.universe                          # quote type/sector -> advisor/universe/
+python -m ai.research --top 10                        # LLM notes via the Jetson
+streamlit run dashboard/app.py
+python -m scheduler.jobs                              # whole daily pipeline
 
 pytest tests/
 ```
