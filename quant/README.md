@@ -1,6 +1,6 @@
 # quant/
 
-Implemented (V1.1): `factors.py` and stage-1 `scoring.py`. Planned: ML scoring and backtest.
+Implemented: `factors.py`, stage-1 `scoring.py`, stage-2 `model.py`, `backtest.py`.
 
 - `factors.py` - 18 point-in-time factors per symbol at each month-end (plus the latest
   bar) from `advisor/financials` + `advisor/prices` into `advisor/metrics/`. Filings count
@@ -9,11 +9,13 @@ Implemented (V1.1): `factors.py` and stage-1 `scoring.py`. Planned: ML scoring a
   Missing: free-cash-flow margin, gross margin, EBITDA and beta (no source data yet).
 - `scoring.py` - stage 1: per-date cross-sectional percentile ranks averaged into
   quality/growth/value/momentum/risk scores (0-100) and a total, into `advisor/scores/`.
-  Stage 2 (below) is not built.
-- (planned) `scoring.py` stage 2 - XGBoost/LightGBM model trained on point-in-time features (no look-ahead leakage)
-  to estimate 12-month forward excess return.
-- `backtest.py` - periodic rebalance backtest (2015-present) vs SPY/QQQ/sector ETFs,
-  reporting CAGR, volatility, max drawdown, Sharpe, Sortino, win rate, turnover.
+- `model.py` - stage 2: LightGBM walk-forward predicting 12-month forward excess return
+  (vs the universe median) from ranked factors, into `advisor/ml_scores/`. A month's model
+  trains only on months whose 12-month outcome was already realized by then.
+- `backtest.py` - monthly rebalance, top-N equal weight by any score column vs SPY, QQQ and
+  the equal-weighted universe: CAGR, volatility, max drawdown, Sharpe, Sortino, win rate
+  vs SPY, turnover. No transaction costs. Sector ETFs and the 2015 start are not done:
+  prices cover 5 years (`collector.market --period max` would extend them).
 
-Reads `advisor/financials/` and `advisor/prices/` and writes `advisor/metrics/` and
-`advisor/scores/` as parquet (Hive layout, `symbol=<TICKER>/`).
+Known limits: the universe is today's constituents (survivorship bias flatters every
+result), and ETFs are excluded via `advisor/universe/` (`python -m collector.universe`).
