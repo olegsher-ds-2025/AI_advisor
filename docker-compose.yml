@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: sher-advisor-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sher}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sher}
+      POSTGRES_DB: ${POSTGRES_DB:-sher_stock_advisor}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+
+volumes:
+  pgdata:
