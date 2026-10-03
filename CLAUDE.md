@@ -14,11 +14,11 @@ The original design conversation is in `link.txt` (a shared ChatGPT link) — re
 it for the full rationale behind architecture choices if something here seems
 underspecified.
 
-## Current state: V1.0 (Data phase only)
+## Current state: V1.x
 
-`collector/` and `quant/` (factors + stage-1 scoring) are implemented and tested.
-`ai/`, `dashboard/`, `scheduler/` are stubs — each has a README describing what it will do and what
-it depends on. Don't assume code exists there; check the README first.
+`collector/`, `quant/`, `ai/research.py`, `dashboard/` and `scheduler/` are implemented
+and tested. Not built: `ai/rag.py`, the Open WebUI layer, sector-ETF benchmarks, TTM
+and FCF factors. Each package README says what exists.
 
 There is no database server. All storage is parquet (the Jetson works with
 parquet), in a Hive layout: `<dataset>/symbol=<TICKER>/<dataset>.parquet`.
