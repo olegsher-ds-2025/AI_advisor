@@ -5,23 +5,15 @@ Usage:
 """
 import argparse
 
+import pandas as pd
 import yfinance as yf
 
-from collector.db import get_connection, upsert
-
+from collector.store import upsert_symbol
 
 PRICE_COLUMNS = ["Open", "High", "Low", "Close", "Adj Close"]
 
 
 def run(tickers: list[str], period: str):
-    conn = get_connection()
-    try:
-        _run(conn, tickers, period)
-    finally:
-        conn.close()
-
-
-def _run(conn, tickers: list[str], period: str):
     for ticker in tickers:
         ticker = ticker.upper()
         hist = yf.Ticker(ticker).history(period=period, auto_adjust=False)
@@ -29,33 +21,21 @@ def _run(conn, tickers: list[str], period: str):
             print(f"[market] {ticker}: no data returned")
             continue
         hist = hist.dropna(subset=PRICE_COLUMNS)
-        hist["Volume"] = hist["Volume"].fillna(0)
 
-        # prices.ticker has an FK to companies; make sure a row exists even if
-        # collector.sec hasn't been run yet for this ticker.
-        upsert(
-            conn,
-            "companies",
-            [{"ticker": ticker, "name": ticker}],
-            conflict_keys=["ticker"],
-            on_conflict_do_nothing=True,
-        )
-
-        rows = [
+        rows = pd.DataFrame(
             {
-                "ticker": ticker,
-                "date": idx.date().isoformat(),
-                "open": float(row["Open"]),
-                "high": float(row["High"]),
-                "low": float(row["Low"]),
-                "close": float(row["Close"]),
-                "adj_close": float(row["Adj Close"]),
-                "volume": int(row["Volume"]),
+                "symbol": ticker,
+                "date": hist.index.tz_localize(None).normalize(),
+                "open": hist["Open"].to_numpy(),
+                "high": hist["High"].to_numpy(),
+                "low": hist["Low"].to_numpy(),
+                "close": hist["Close"].to_numpy(),
+                "adj_close": hist["Adj Close"].to_numpy(),
+                "volume": hist["Volume"].fillna(0).astype("int64").to_numpy(),
             }
-            for idx, row in hist.iterrows()
-        ]
-        upsert(conn, "prices", rows, conflict_keys=["ticker", "date"])
-        print(f"[market] {ticker}: upserted {len(rows)} daily bars")
+        )
+        path = upsert_symbol("prices", ticker, rows, ["date"])
+        print(f"[market] {ticker}: {len(rows)} daily bars -> {path}")
 
 
 if __name__ == "__main__":

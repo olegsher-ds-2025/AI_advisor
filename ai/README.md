@@ -6,7 +6,7 @@ llama.cpp, not on this machine:
 - `research.py` - builds a per-company context (metrics, score deltas, latest
   filings/earnings/news) and prompts the LLM for thesis / bull case / bear case /
   risks / contradictions. Writes to the `research` table.
-- `rag.py` - indexes 10-K/10-Q/8-K/earnings transcripts into pgvector (or Qdrant
+- `rag.py` - indexes 10-K/10-Q/8-K/earnings transcripts into a vector index (Qdrant
   later) for natural-language queries over filings.
 - `prompts/` - prompt templates for the above.
 

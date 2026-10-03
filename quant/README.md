@@ -10,5 +10,5 @@ Planned for V1.1-V1.3:
 - `backtest.py` - periodic rebalance backtest (2015-present) vs SPY/QQQ/sector ETFs,
   reporting CAGR, volatility, max drawdown, Sharpe, Sortino, win rate, turnover.
 
-Requires the `metrics` and `scores` tables, which don't exist yet - add them in a
-migration under `database/migrations/` before writing this code.
+Reads `advisor/financials/` and `advisor/prices/` and writes `advisor/metrics/` and
+`advisor/scores/` as parquet (Hive layout, `symbol=<TICKER>/`).

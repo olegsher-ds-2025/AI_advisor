@@ -1,6 +1,5 @@
-psycopg2-binary>=2.9
-requests>=2.32
-yfinance>=0.2
 pandas>=2.2
+pyarrow>=16
+yfinance>=0.2
 python-dotenv>=1.0
 pytest>=8

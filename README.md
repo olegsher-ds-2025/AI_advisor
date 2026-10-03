@@ -9,7 +9,7 @@ Origin: `link.txt` holds the ChatGPT conversation that specced this out.
 
 ## Status: V1.0 (Data phase)
 
-Implemented: SEC EDGAR + yfinance collectors writing into PostgreSQL.
+Implemented: point-in-time financials built from the existing SEC facts parquet, plus a yfinance price collector. All storage is parquet; there is no database server.
 Not yet implemented: factors/scoring/backtest (`quant/`), LLM research/RAG (`ai/`),
 dashboard (`dashboard/`), daily pipeline (`scheduler/`) — see the README in each
 for what's planned there.
@@ -17,13 +17,12 @@ for what's planned there.
 ## Quickstart
 
 ```bash
-cp .env.example .env   # fill in SEC_USER_AGENT at minimum
-docker compose up -d postgres
+cp .env.example .env   # set STOCK_MARKET_DIR if the lake isn't at ~/jetson_mount/stock_market
 uv venv && uv pip install -r requirements.txt
 source .venv/bin/activate
 
-python -m collector.sec AAPL MSFT NVDA      # fundamentals from SEC
-python -m collector.market AAPL MSFT NVDA   # daily prices from yfinance
+python -m collector.financials AAPL MSFT NVDA   # fundamentals/ facts -> advisor/financials/
+python -m collector.market AAPL MSFT NVDA       # daily prices from yfinance -> advisor/prices/
 ```
 
 Run tests with `pytest tests/`.
