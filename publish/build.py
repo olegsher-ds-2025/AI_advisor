@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from collector.intraday import dataset as intraday_dataset
 from collector.store import list_symbols, read_symbol
 from collector.universe import read_universe
 from quant import indicators
@@ -26,7 +27,13 @@ DELTA_MONTHS = 3
 PRICE_DAYS = 252
 SCORE_COLUMNS = list(CATEGORIES) + ["total"]
 NOTE_FIELDS = ["thesis", "bull_case", "bear_case", "risks", "contradictions"]
-TIMEFRAMES = {"daily": None, "weekly": "W"}
+US_OPEN = "9h30min"
+MIN_BARS = 30
+# label -> (source dataset or interval, resample rule, offset); label order is the page's column order
+INTRADAY_TIMEFRAMES = {
+    "1m": ("1m", None), "5m": ("5m", None), "15m": ("15m", None), "30m": ("30m", None), "60m": ("60m", None),
+    "120m": ("60m", "120min"), "240m": ("60m", "240min"), "480m": ("60m", "480min"),
+}
 
 
 def _clean(value):
@@ -52,28 +59,40 @@ def _rounded(obj):
     return _clean(obj)
 
 
-def indicator_snapshot(prices: pd.DataFrame) -> dict:
+def snapshot_of(tf: pd.DataFrame) -> dict | None:
+    if len(tf) < MIN_BARS:
+        return None
+    trend = indicators.supertrend(tf).iloc[-1]
+    lines = indicators.alligator(tf).iloc[-1]
+    ordered_up = lines["lips"] > lines["teeth"] > lines["jaw"]
+    ordered_down = lines["lips"] < lines["teeth"] < lines["jaw"]
+    return {
+        "close": tf["close"].iloc[-1],
+        "change_pct": (tf["close"].iloc[-1] / tf["close"].iloc[-2] - 1) * 100,
+        "rsi": indicators.rsi(tf["close"]).iloc[-1],
+        "atr": indicators.atr(tf).iloc[-1],
+        "supertrend": trend["supertrend"],
+        "supertrend_direction": int(trend["direction"]),
+        "alligator": "up" if ordered_up else "down" if ordered_down else "sleeping",
+        "iix": indicators.iix(tf).iloc[-1],
+    }
+
+
+def intraday_bars(symbol: str, interval: str) -> pd.DataFrame | None:
+    bars = read_symbol(intraday_dataset(interval), symbol)
+    return None if bars is None else bars.set_index("ts").sort_index()[["open", "high", "low", "close", "volume"]]
+
+
+def indicator_snapshot(symbol: str, prices: pd.DataFrame) -> dict:
     bars = prices.set_index("date").sort_index().rename(columns=str.lower)[["open", "high", "low", "close", "volume"]]
-    snapshot = {}
-    for name, rule in TIMEFRAMES.items():
-        tf = indicators.resample(bars, rule) if rule else bars
-        if len(tf) < 30:
-            continue
-        trend = indicators.supertrend(tf).iloc[-1]
-        lines = indicators.alligator(tf).iloc[-1]
-        ordered_up = lines["lips"] > lines["teeth"] > lines["jaw"]
-        ordered_down = lines["lips"] < lines["teeth"] < lines["jaw"]
-        snapshot[name] = {
-            "close": tf["close"].iloc[-1],
-            "change_pct": (tf["close"].iloc[-1] / tf["close"].iloc[-2] - 1) * 100,
-            "rsi": indicators.rsi(tf["close"]).iloc[-1],
-            "atr": indicators.atr(tf).iloc[-1],
-            "supertrend": trend["supertrend"],
-            "supertrend_direction": int(trend["direction"]),
-            "alligator": "up" if ordered_up else "down" if ordered_down else "sleeping",
-            "iix": indicators.iix(tf).iloc[-1],
-        }
-    return snapshot
+    frames = {}
+    for label, (interval, rule) in INTRADAY_TIMEFRAMES.items():
+        source = intraday_bars(symbol, interval)
+        if source is not None:
+            frames[label] = indicators.resample(source, rule, US_OPEN) if rule else source
+    frames["daily"], frames["weekly"] = bars, indicators.resample(bars, "W")
+    snapshots = {label: snapshot_of(tf) for label, tf in frames.items()}
+    return {label: snap for label, snap in snapshots.items() if snap}
 
 
 def research_note(symbol: str) -> dict | None:
@@ -100,7 +119,7 @@ def symbol_payload(symbol: str, info: pd.Series) -> dict:
         "prices": {"date": recent["date"].dt.strftime("%Y-%m-%d").tolist(), "close": recent["close"].tolist()},
         "score_history": {"as_of": scores["as_of"].dt.strftime("%Y-%m-%d").tolist(), **{c: scores[c].tolist() for c in SCORE_COLUMNS}},
         "factors": metrics.to_dict(),
-        "indicators": indicator_snapshot(prices),
+        "indicators": indicator_snapshot(symbol, prices),
         "research": research_note(symbol),
     }
 

@@ -16,8 +16,8 @@ underspecified.
 
 ## Current state: V1.x
 
-`collector/`, `quant/`, `ai/research.py`, `dashboard/` and `scheduler/` are implemented
-and tested. Not built: `ai/rag.py`, the Open WebUI layer, sector-ETF benchmarks, TTM
+`collector/` (incl. intraday), `quant/` (incl. `indicators.py`), `ai/research.py`, `dashboard/`, `publish/`
+and `scheduler/` are implemented and tested. Not built: `ai/rag.py`, the Open WebUI layer, sector-ETF benchmarks, TTM
 and FCF factors. Each package README says what exists.
 
 There is no database server. All storage is parquet (the Jetson works with
@@ -38,6 +38,8 @@ python -m quant.model                                 # walk-forward LightGBM ->
 python -m quant.backtest --score total ml_score       # top-N backtest vs SPY/QQQ
 python -m collector.universe                          # quote type/sector -> advisor/universe/
 python -m ai.research --top 10                        # LLM notes via the Jetson
+python -m collector.intraday TICKER [...]            # 1-60 min bars -> advisor/intraday_<interval>/
+python -m publish.build                               # static GitHub Pages site -> build/site/
 streamlit run dashboard/app.py
 python -m scheduler.jobs                              # whole daily pipeline
 

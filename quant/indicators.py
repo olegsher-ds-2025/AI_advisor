@@ -8,8 +8,9 @@ import pandas as pd
 OHLCV_RULES = {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
 
 
-def resample(bars: pd.DataFrame, rule: str) -> pd.DataFrame:
-    return bars.resample(rule).agg(OHLCV_RULES).dropna(subset=["close"])
+def resample(bars: pd.DataFrame, rule: str, offset: str | None = None) -> pd.DataFrame:
+    """offset anchors intraday bins, e.g. "9h30min" to start the day at the US open."""
+    return bars.resample(rule, offset=offset).agg(OHLCV_RULES).dropna(subset=["close"])
 
 
 def _wilder(series: pd.Series, period: int) -> pd.Series:

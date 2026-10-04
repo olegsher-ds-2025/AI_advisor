@@ -78,8 +78,18 @@ def parse_note(text: str) -> dict:
     return {**note, "raw": text}
 
 
+def has_research_inputs(symbol: str, history: pd.DataFrame, equities: set[str]) -> bool:
+    if symbol not in equities or len(history) <= DELTA_MONTHS:
+        return False
+    financials = read_symbol("financials", symbol)
+    return financials is not None and (financials["period_type"] == "FY").any()
+
+
 def top_symbols(n: int) -> list[str]:
-    latest = pd.concat([read_symbol("scores", s).tail(1) for s in list_symbols("scores")])
+    universe = read_universe()
+    equities = set(universe.loc[universe["quote_type"] == "EQUITY", "symbol"])
+    history = {s: read_symbol("scores", s) for s in list_symbols("scores")}
+    latest = pd.concat([h.tail(1) for s, h in history.items() if has_research_inputs(s, h, equities)])
     return latest.nlargest(n, "total")["symbol"].tolist()
 
 
