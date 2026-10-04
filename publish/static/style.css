@@ -25,3 +25,9 @@ th.sorted::after { content:" \25BE"; } th.sorted.asc::after { content:" \25B4"; 
 .note p { margin:4px 0 12px; white-space:pre-wrap; }
 details { margin:24px 0; }
 .pager { margin:12px 0; display:flex; gap:12px; align-items:center; }
+.gauges { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:24px; align-items:start; }
+.gauge { margin:0; text-align:center; }
+.gauge figcaption { font-weight:600; }
+.gauge svg { width:100%; max-width:240px; }
+.gauge strong { display:block; font-size:18px; }
+.gauge-host { display:flex; justify-content:center; }

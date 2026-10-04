@@ -15,6 +15,17 @@ notes are published. Raw financials and news stay local.
 Pages can't reach the parquet lake on the Jetson, so the site is built on this machine and
 pushed to the `gh-pages` branch.
 
+## Gauges
+
+Company pages show three gauges:
+
+- **Technical summary** (Strong sell to Strong buy) per timeframe: RSI(14) buy below 30 and sell
+  above 70, Supertrend direction, Alligator order, IIX buy above +10 and sell below -10. The
+  gauge is the average of the four votes. It reads indicators mechanically; it is not a
+  recommendation. The top-10 table shows the same label for the daily timeframe.
+- **Value**: the value score (P/E, P/S, P/B percentiles), red = expensive, green = cheap.
+- **Overall score**: the total score.
+
 ## Indicators
 
 Price change, RSI(14), ATR(14), Alligator (13/8, 8/5, 5/3), Supertrend(10, 3) and IIX(21),

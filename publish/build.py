@@ -158,8 +158,7 @@ def top_picks(rows: list[dict], payloads: dict[str, dict]) -> list[dict]:
         picks.append(
             {
                 **row,
-                "rsi": daily.get("rsi"),
-                "supertrend_direction": daily.get("supertrend_direction"),
+                "daily": daily,
                 "thesis": note["thesis"] if note else None,
             }
         )
