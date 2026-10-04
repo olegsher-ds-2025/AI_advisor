@@ -11,8 +11,8 @@ const el = (tag, props = {}, ...children) => {
   return node;
 };
 const num = (v, digits = 0) => (v == null ? "-" : v.toFixed(digits));
-const signed = (v) => (v == null ? "-" : (v > 0 ? "+" : "") + v.toFixed(0));
-const cls = (v) => (v > 0 ? "up" : v < 0 ? "down" : "");
+const signed = (v) => (v == null ? "-" : (Math.round(v) > 0 ? "+" : "") + (Math.round(v) || 0));
+const cls = (v) => (Math.round(v) > 0 ? "up" : Math.round(v) < 0 ? "down" : "");
 
 async function loadJson(path) {
   const resp = await fetch(path);

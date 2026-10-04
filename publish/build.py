@@ -147,6 +147,8 @@ def build(out: Path):
     universe = universe[universe["quote_type"] == "EQUITY"].set_index("symbol")
     symbols = [s for s in list_symbols("scores") if s in universe.index]
     frames = {s: read_symbol("scores", s) for s in symbols}
+    frames = {s: df for s, df in frames.items() if len(df) > DELTA_MONTHS}
+    symbols = list(frames)
 
     if out.exists():
         shutil.rmtree(out)
