@@ -48,6 +48,33 @@ function lineChart(series, labels) {
   return el("div", {}, svg, legend, el("div", { className: "muted", textContent: `${labels[0]} to ${labels[labels.length - 1]}   range ${lo.toFixed(2)} - ${hi.toFixed(2)}` }));
 }
 
+function topPicks() {
+  const trend = (d) => (d > 0 ? "uptrend" : d < 0 ? "downtrend" : "-");
+  const head = el("tr", {}, ...["#", "Symbol", "Name", "Sector", "Total", "3m chg", "RSI 14", "Supertrend"].map((t) => el("th", { textContent: t })));
+  const rows = index.top.map((r, i) =>
+    el("tr", {},
+      el("td", { textContent: i + 1 }),
+      el("td", {}, el("a", { href: `#/s/${r.symbol}`, textContent: r.symbol })),
+      el("td", { textContent: r.name || "" }),
+      el("td", { textContent: r.sector || "" }),
+      el("td", { textContent: num(r.total) }),
+      el("td", { className: cls(r.total_change), textContent: signed(r.total_change) }),
+      el("td", { textContent: num(r.rsi, 0) }),
+      el("td", { textContent: trend(r.supertrend_direction) })));
+  return el("section", {},
+    el("h2", { textContent: `Top ${index.top.length} by score today` }),
+    el("p", { className: "muted", textContent: `Highest total scores as of ${index.as_of}, only stocks with all five category scores. A research shortlist to investigate, not buy recommendations or investment advice. Open a stock for the thesis, bull and bear case.` }),
+    el("div", { className: "table-wrap" }, el("table", {}, el("thead", {}, head), el("tbody", {}, ...rows))));
+}
+
+function columnLegend() {
+  const labels = { sector: "Sector", quality: "Quality", growth: "Growth", value: "Value", momentum: "Momentum", risk: "Risk", total: "Total", total_change: `${index.delta_months}m chg` };
+  return el("details", { open: true },
+    el("summary", { textContent: "What the columns mean" }),
+    ...Object.entries(labels).flatMap(([key, label]) => [el("strong", { textContent: label }), el("p", { className: "muted", textContent: index.columns[key] })]),
+    el("p", { className: "muted", textContent: "Risk: 100 = lowest volatility and smallest drawdown. Scores rank stocks against each other on each date, they don't predict returns." }));
+}
+
 function listView() {
   const sectors = [...new Set(index.rows.map((r) => r.sector).filter(Boolean))].sort();
   const search = el("input", { type: "search", placeholder: "Symbol or name", value: listState.query });
@@ -67,7 +94,7 @@ function listView() {
     const columns = [["symbol", "Symbol"], ["name", "Name"], ["sector", "Sector"], ...SCORE_COLUMNS.map((c) => [c, c[0].toUpperCase() + c.slice(1)]), ["total_change", `${index.delta_months}m chg`]];
 
     const head = el("tr", {}, ...columns.map(([key, label]) => {
-      const th = el("th", { textContent: label });
+      const th = el("th", { textContent: label, title: index.columns[key] || "" });
       if (key === listState.sort) th.classList.add("sorted", ...(listState.asc ? ["asc"] : []));
       th.onclick = () => { listState.asc = listState.sort === key ? !listState.asc : key === "symbol" || key === "name" || key === "sector"; listState.sort = key; render(); };
       return th;
@@ -88,7 +115,7 @@ function listView() {
   search.oninput = () => { listState.query = search.value; listState.page = 0; render(); };
   sector.onchange = () => { listState.sector = sector.value; listState.page = 0; render(); };
   render();
-  view.replaceChildren(el("div", { className: "controls" }, search, sector), tableHost, el("p", { className: "muted", textContent: "Scores are 0-100 percentiles vs the universe, higher is better (risk 100 = lowest volatility)." }));
+  view.replaceChildren(topPicks(), el("h2", { textContent: "All stocks" }), el("div", { className: "controls" }, search, sector), tableHost, columnLegend());
 }
 
 function indicatorTable(indicators) {

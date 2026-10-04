@@ -124,6 +124,48 @@ def symbol_payload(symbol: str, info: pd.Series) -> dict:
     }
 
 
+FACTOR_LABELS = {
+    "net_margin": "net margin", "roe": "return on equity", "roa": "return on assets",
+    "debt_to_equity": "debt/equity", "liabilities_to_assets": "liabilities/assets",
+    "revenue_growth": "revenue growth", "net_income_growth": "net income growth", "eps_growth": "EPS growth",
+    "pe": "P/E", "ps": "P/S", "pb": "P/B",
+    "ret_3m": "3m return", "ret_6m": "6m return", "ret_12m_ex_1m": "12m return excl. last month", "sma200_gap": "distance above the 200-day average",
+    "vol_60d": "60-day volatility", "drawdown_252d": "drawdown from the 1-year high",
+}
+TOP_N = 10
+
+
+def column_help() -> dict:
+    help_ = {
+        category: "Percentile vs the universe (0-100, higher is better) of: "
+        + ", ".join(f"{FACTOR_LABELS[f]} ({'higher' if higher else 'lower'} is better)" for f, higher in factors.items())
+        + "."
+        for category, factors in CATEGORIES.items()
+    }
+    help_["total"] = "Average of the five category scores."
+    help_["total_change"] = "Change in the total score versus three months ago, in score points."
+    help_["sector"] = "Sector reported by Yahoo Finance."
+    return help_
+
+
+def top_picks(rows: list[dict], payloads: dict[str, dict]) -> list[dict]:
+    complete = [r for r in rows if all(r[c] is not None and not pd.isna(r[c]) for c in SCORE_COLUMNS)]
+    picks = []
+    for row in sorted(complete, key=lambda r: -r["total"])[:TOP_N]:
+        payload = payloads[row["symbol"]]
+        daily = payload["indicators"].get("daily", {})
+        note = payload["research"]
+        picks.append(
+            {
+                **row,
+                "rsi": daily.get("rsi"),
+                "supertrend_direction": daily.get("supertrend_direction"),
+                "thesis": note["thesis"] if note else None,
+            }
+        )
+    return picks
+
+
 def index_rows(frames: dict[str, pd.DataFrame], universe: pd.DataFrame) -> list[dict]:
     rows = []
     for symbol, scores in frames.items():
@@ -158,9 +200,18 @@ def build(out: Path):
 
     rows = index_rows(frames, universe)
     as_of = max(df["as_of"].max() for df in frames.values())
-    _dump(out / "data" / "index.json", _rounded({"as_of": as_of, "generated_at": pd.Timestamp.now(tz="UTC"), "delta_months": DELTA_MONTHS, "rows": rows}))
-    for symbol in symbols:
-        _dump(out / "data" / "symbols" / f"{symbol}.json", _rounded(symbol_payload(symbol, universe.loc[symbol])))
+    payloads = {symbol: symbol_payload(symbol, universe.loc[symbol]) for symbol in symbols}
+    for symbol, payload in payloads.items():
+        _dump(out / "data" / "symbols" / f"{symbol}.json", _rounded(payload))
+    index = {
+        "as_of": as_of,
+        "generated_at": pd.Timestamp.now(tz="UTC"),
+        "delta_months": DELTA_MONTHS,
+        "columns": column_help(),
+        "top": top_picks(rows, payloads),
+        "rows": rows,
+    }
+    _dump(out / "data" / "index.json", _rounded(index))
     print(f"[publish] {len(symbols)} symbols, as of {as_of:%Y-%m-%d} -> {out}")
 
 

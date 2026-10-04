@@ -23,4 +23,5 @@ th.sorted::after { content:" \25BE"; } th.sorted.asc::after { content:" \25B4"; 
 .chart path { fill:none; stroke-width:1.5; vector-effect:non-scaling-stroke; }
 .legend span { margin-right:12px; }
 .note p { margin:4px 0 12px; white-space:pre-wrap; }
+details { margin:24px 0; }
 .pager { margin:12px 0; display:flex; gap:12px; align-items:center; }
