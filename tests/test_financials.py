@@ -63,3 +63,18 @@ def test_first_concept_in_precedence_order_wins():
     ))
 
     assert df["revenue"].tolist() == [222]
+
+
+def test_discrete_quarters_are_derived_from_cumulative_cash_flow():
+    ocf = "NetCashProvidedByUsedInOperatingActivities"
+    df = build_financials("TEST", facts(
+        fact(ocf, 10, "2023-03-31", form="10-Q", accn="q1", filed="2023-05-01", start="2023-01-01"),
+        fact(ocf, 25, "2023-06-30", form="10-Q", accn="q2", filed="2023-08-01", start="2023-01-01"),
+        fact(ocf, 45, "2023-09-30", form="10-Q", accn="q3", filed="2023-11-01", start="2023-01-01"),
+        fact(ocf, 80, "2023-12-31", form="10-K", accn="k", filed="2024-02-01", start="2023-01-01"),
+    ))
+    quarters = df[df["period_type"] == "Q"]
+    quarters = quarters.set_index(quarters["period"].dt.strftime("%Y-%m-%d"))
+
+    assert quarters["operating_cf"].to_dict() == {"2023-03-31": 10, "2023-06-30": 15, "2023-09-30": 20, "2023-12-31": 35}
+    assert quarters.loc["2023-12-31", "filed"] == pd.Timestamp("2024-02-01")

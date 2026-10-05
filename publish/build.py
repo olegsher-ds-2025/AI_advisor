@@ -125,10 +125,10 @@ def symbol_payload(symbol: str, info: pd.Series) -> dict:
 
 
 FACTOR_LABELS = {
-    "net_margin": "net margin", "roe": "return on equity", "roa": "return on assets",
+    "net_margin": "net margin", "gross_margin": "gross margin", "operating_margin": "operating margin", "fcf_margin": "free-cash-flow margin", "roe": "return on equity", "roa": "return on assets",
     "debt_to_equity": "debt/equity", "liabilities_to_assets": "liabilities/assets",
     "revenue_growth": "revenue growth", "net_income_growth": "net income growth", "eps_growth": "EPS growth",
-    "pe": "P/E", "ps": "P/S", "pb": "P/B",
+    "pe": "P/E", "ps": "P/S", "pb": "P/B", "fcf_yield": "free-cash-flow yield",
     "ret_3m": "3m return", "ret_6m": "6m return", "ret_12m_ex_1m": "12m return excl. last month", "sma200_gap": "distance above the 200-day average",
     "vol_60d": "60-day volatility", "drawdown_252d": "drawdown from the 1-year high",
 }

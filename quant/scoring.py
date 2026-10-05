@@ -11,9 +11,9 @@ from collector.store import list_symbols, read_symbol, upsert_symbol
 
 # factor -> True when a higher value is better
 CATEGORIES = {
-    "quality": {"net_margin": True, "roe": True, "roa": True, "debt_to_equity": False, "liabilities_to_assets": False},
+    "quality": {"net_margin": True, "gross_margin": True, "operating_margin": True, "fcf_margin": True, "roe": True, "roa": True, "debt_to_equity": False, "liabilities_to_assets": False},
     "growth": {"revenue_growth": True, "net_income_growth": True, "eps_growth": True},
-    "value": {"pe": False, "ps": False, "pb": False},
+    "value": {"pe": False, "ps": False, "pb": False, "fcf_yield": True},
     "momentum": {"ret_3m": True, "ret_6m": True, "ret_12m_ex_1m": True, "sma200_gap": True},
     "risk": {"vol_60d": False, "drawdown_252d": True},
 }

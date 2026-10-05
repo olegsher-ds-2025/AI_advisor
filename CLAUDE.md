@@ -17,8 +17,7 @@ underspecified.
 ## Current state: V1.x
 
 `collector/` (incl. intraday), `quant/` (incl. `indicators.py`), `ai/research.py`, `dashboard/`, `publish/`
-and `scheduler/` are implemented and tested. Not built: `ai/rag.py`, the Open WebUI layer, sector-ETF benchmarks, TTM
-and FCF factors. Each package README says what exists.
+and `scheduler/` are implemented and tested. Not built: `ai/rag.py`, the Open WebUI layer. Each package README says what exists.
 
 There is no database server. All storage is parquet (the Jetson works with
 parquet), in a Hive layout: `<dataset>/symbol=<TICKER>/<dataset>.parquet`.
@@ -29,7 +28,8 @@ parquet), in a Hive layout: `<dataset>/symbol=<TICKER>/<dataset>.parquet`.
 uv venv && uv pip install -r requirements.txt
 source .venv/bin/activate
 
-python -m collector.financials TICKER [TICKER ...]    # fundamentals/ facts -> advisor/financials/
+python -m collector.sec_facts [TICKER ...]            # SEC companyfacts: OCF/capex/gross profit/op income -> advisor/facts_extra/
+python -m collector.financials TICKER [TICKER ...]    # fundamentals/ + facts_extra/ -> advisor/financials/
 python -m collector.market TICKER [...] --period 5y   # yfinance prices -> advisor/prices/
 
 python -m quant.factors [TICKER ...]                  # financials + prices -> advisor/metrics/
@@ -75,8 +75,12 @@ SEC facts parquet (fundamentals/) + yfinance -> collector/ -> advisor/*.parquet
   rename.
 - The existing `fundamentals/` only carries 10 concepts (revenue, net income,
   EPS, assets, liabilities, cash, equity, shares, long-term debt). Gross profit,
-  operating income, operating cash flow and capex are mapped but come out NaN
-  until the Jetson-side fetcher collects them, so `free_cash_flow` is NaN too.
+  operating income, operating cash flow and capex come from `collector/sec_facts.py`
+  (SEC companyfacts, same long format, stored in `advisor/facts_extra/` and merged by
+  `collector.financials`). Without that step they are NaN, and so is `free_cash_flow`.
+- `financials` also derives discrete quarters from cumulative facts (Q2 = 6M-3M,
+  Q3 = 9M-6M, Q4 = FY-9M) as extra `Q` rows, filed with the later input; `quant/factors.py`
+  sums four of them for TTM.
 
 ## Infra split (per the original plan, not all built yet)
 

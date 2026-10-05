@@ -1,8 +1,9 @@
 """Point-in-time factors per symbol at each month-end, from advisor/financials + advisor/prices.
 
 A fundamental is only used once its filing date is before the as-of date.
-Annual (FY) figures are used for income-statement ratios; TTM needs Q4 derived
-from FY minus 9M, which the financials dataset does not carry yet.
+Annual (FY) figures are used for growth, ROE/ROA and P/E; margins and cash-flow
+factors use trailing-twelve-month sums of the last four discrete quarters
+(collector.financials derives Q2-Q4 from the cumulative facts).
 
 Usage:
     python -m quant.factors AAPL MSFT NVDA     # no args = every symbol with financials
@@ -16,6 +17,8 @@ from collector.store import list_symbols, read_symbol, upsert_symbol
 
 TRADING_DAYS = 252
 BALANCE_COLUMNS = ["assets", "liabilities", "cash", "debt", "equity", "shares"]
+TTM_COLUMNS = ["revenue", "gross_profit", "operating_income", "free_cash_flow"]
+TTM_SPAN_DAYS = (250, 290)  # first to last period-end of four consecutive quarters is ~273 days
 
 
 def price_factors(prices: pd.DataFrame) -> pd.DataFrame:
@@ -43,6 +46,14 @@ def _growth(current, prior):
     return _ratio(current - prior, abs(prior)) if pd.notna(current) and pd.notna(prior) else np.nan
 
 
+def ttm_sums(known: pd.DataFrame) -> pd.Series:
+    quarters = known[known["period_type"] == "Q"].groupby("period").last().sort_index().tail(4)
+    span = (quarters.index[-1] - quarters.index[0]).days if len(quarters) == 4 else 0
+    if not TTM_SPAN_DAYS[0] <= span <= TTM_SPAN_DAYS[1]:
+        return pd.Series(np.nan, index=TTM_COLUMNS)
+    return quarters[TTM_COLUMNS].sum(min_count=4)
+
+
 def fundamental_factors(fin: pd.DataFrame, as_of: pd.Timestamp, close: float) -> dict:
     known = fin[fin["filed"] < as_of].sort_values("filed")
     if known.empty:
@@ -52,7 +63,14 @@ def fundamental_factors(fin: pd.DataFrame, as_of: pd.Timestamp, close: float) ->
     annual = known[known["period_type"] == "FY"].groupby("period").last().sort_index()
     latest_balance = known.sort_values(["period", "filed"]).groupby("period").last().sort_index()[BALANCE_COLUMNS].ffill().iloc[-1]
 
-    factors = {}
+    market_cap = close * latest_balance["shares"]
+    ttm = ttm_sums(known)
+    factors = dict(
+        gross_margin=_ratio(ttm["gross_profit"], ttm["revenue"]),
+        operating_margin=_ratio(ttm["operating_income"], ttm["revenue"]),
+        fcf_margin=_ratio(ttm["free_cash_flow"], ttm["revenue"]),
+        fcf_yield=_ratio(ttm["free_cash_flow"], market_cap),
+    )
     if not annual.empty:
         current = annual.iloc[-1]
         prior = annual[(current.name - annual.index).days.to_series(index=annual.index).between(350, 380)]
@@ -66,7 +84,6 @@ def fundamental_factors(fin: pd.DataFrame, as_of: pd.Timestamp, close: float) ->
             eps_growth=_growth(current["eps"], prior.get("eps", np.nan)),
             pe=_ratio(close, current["eps"]) if current["eps"] > 0 else np.nan,
         )
-        market_cap = close * latest_balance["shares"]
         factors["ps"] = _ratio(market_cap, current["revenue"])
         factors["pb"] = _ratio(market_cap, latest_balance["equity"]) if latest_balance["equity"] > 0 else np.nan
     factors["debt_to_equity"] = _ratio(latest_balance["debt"], latest_balance["equity"]) if latest_balance["equity"] > 0 else np.nan

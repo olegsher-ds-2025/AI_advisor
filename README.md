@@ -12,13 +12,12 @@ Origin: `link.txt` holds the ChatGPT conversation that specced this out.
 Implemented, all on parquet with no database server:
 
 - `collector/` - point-in-time financials from the existing SEC facts, yfinance prices, universe metadata.
-- `quant/` - 18 point-in-time factors, stage-1 percentile scores, walk-forward LightGBM, backtest vs SPY/QQQ.
+- `quant/` - 22 point-in-time factors, stage-1 percentile scores, walk-forward LightGBM, backtest vs SPY/QQQ.
 - `ai/research.py` - research notes from the Jetson llama.cpp server.
 - `dashboard/` - Streamlit lists and company drill-down.
 - `scheduler/` - daily pipeline (cron line in the module docstring, not installed).
 
-Not built: `ai/rag.py`, sector-ETF benchmarks, TTM/FCF factors, transaction costs, a backtest before
-2021 (prices cover 5 years).
+Not built: `ai/rag.py`, point-in-time universe membership.
 
 Known limits: the universe is today's constituents (survivorship bias), the ML score shows no
 out-of-sample skill (rank IC ~0.005), and the Qwen notes can misread scores, so check them against

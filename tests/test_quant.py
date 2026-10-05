@@ -43,7 +43,7 @@ def test_non_positive_equity_has_no_roe_or_leverage():
 def test_scores_rank_within_each_date_and_invert_lower_is_better():
     as_of = pd.Timestamp("2024-01-31")
     metrics = pd.DataFrame({"symbol": ["A", "B", "C"], "as_of": as_of, "roe": [0.1, 0.2, 0.3], "pe": [10.0, 20.0, 30.0]})
-    for col in ["net_margin", "roa", "debt_to_equity", "liabilities_to_assets", "revenue_growth", "net_income_growth",
+    for col in ["net_margin", "gross_margin", "operating_margin", "fcf_margin", "fcf_yield", "roa", "debt_to_equity", "liabilities_to_assets", "revenue_growth", "net_income_growth",
                 "eps_growth", "ps", "pb", "ret_3m", "ret_6m", "ret_12m_ex_1m", "sma200_gap", "vol_60d", "drawdown_252d"]:
         metrics[col] = np.nan
 
@@ -51,3 +51,27 @@ def test_scores_rank_within_each_date_and_invert_lower_is_better():
 
     assert scored.loc["C", "quality"] > scored.loc["A", "quality"]
     assert scored.loc["A", "value"] > scored.loc["C", "value"]
+
+
+def quarterly_rows(**values):
+    ends = ["2023-03-31", "2023-06-30", "2023-09-30", "2023-12-31"]
+    return [fin_row(end, "Q", "2024-02-01", **{k: v[i] for k, v in values.items()}) for i, end in enumerate(ends)]
+
+
+def test_ttm_factors_sum_the_last_four_quarters():
+    fin = pd.DataFrame(quarterly_rows(
+        revenue=[100.0] * 4, gross_profit=[40.0] * 4, operating_income=[20.0] * 4, free_cash_flow=[10.0, 10.0, 10.0, 20.0], shares=[10.0] * 4,
+    ))
+
+    factors = fundamental_factors(fin, pd.Timestamp("2024-03-31"), close=10.0)
+
+    assert factors["gross_margin"] == 0.4
+    assert factors["operating_margin"] == 0.2
+    assert factors["fcf_margin"] == 0.125
+    assert factors["fcf_yield"] == 0.5
+
+
+def test_ttm_needs_four_consecutive_quarters():
+    fin = pd.DataFrame(quarterly_rows(revenue=[100.0] * 4, gross_profit=[40.0] * 4, operating_income=[20.0] * 4, free_cash_flow=[10.0] * 4).copy()[1:])
+
+    assert np.isnan(fundamental_factors(fin, pd.Timestamp("2024-03-31"), close=10.0)["gross_margin"])
