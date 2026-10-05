@@ -105,11 +105,9 @@ def build_financials(symbol: str, facts: pd.DataFrame) -> pd.DataFrame:
 def run(symbols: list[str]):
     for symbol in symbols:
         symbol = symbol.upper()
-        facts = read_facts(symbol)
-        extra = read_symbol("facts_extra", symbol)
-        if facts is not None and extra is not None:
-            facts = pd.concat([facts, extra], ignore_index=True)
-        if facts is None:
+        parts = [f for f in (read_facts(symbol), read_symbol("facts_extra", symbol)) if f is not None]
+        facts = pd.concat(parts, ignore_index=True) if parts else None
+        if facts is None or facts.empty:
             print(f"[financials] {symbol}: no facts.parquet under fundamentals/, skipping")
             continue
         rows = build_financials(symbol, facts)

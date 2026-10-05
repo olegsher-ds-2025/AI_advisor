@@ -14,6 +14,7 @@ import argparse
 import numpy as np
 import pandas as pd
 
+from collector.membership import filter_members, member_counts
 from collector.store import DATA_DIR, list_symbols, read_symbol
 from collector.universe import read_universe
 
@@ -57,8 +58,8 @@ def eligible_symbols(symbols: list[str]) -> list[str]:
         universe = read_universe()
     except FileNotFoundError:
         return symbols
-    equities = set(universe.loc[universe["quote_type"] == "EQUITY", "symbol"])
-    return [s for s in symbols if s in equities]
+    funds = set(universe.loc[universe["quote_type"].notna() & (universe["quote_type"] != "EQUITY"), "symbol"])
+    return [s for s in symbols if s not in funds]
 
 
 def sector_benchmarks(symbols: list[str]) -> pd.Series:
@@ -91,6 +92,22 @@ def run_strategy(
     return pd.DataFrame(rows).set_index("as_of")
 
 
+def universe_returns(scores: pd.DataFrame, forward: pd.DataFrame) -> pd.Series:
+    """Equal-weight return of the scored symbols at each date (the point-in-time members once filtered)."""
+    return scores.groupby("as_of")["symbol"].apply(lambda s: forward.loc[s.name, s].mean())
+
+
+def print_coverage(scores: pd.DataFrame):
+    try:
+        members = member_counts(pd.DatetimeIndex(sorted(scores["as_of"].unique())))
+    except FileNotFoundError:
+        return
+    scored = scores.groupby("as_of")["symbol"].nunique()
+    coverage = (scored / members).dropna()
+    print(f"[backtest] scored share of index members per month: mean {coverage.mean():.0%}, "
+          f"min {coverage.min():.0%} ({coverage.idxmin().date()}), latest {coverage.iloc[-1]:.0%}")
+
+
 def performance(returns: pd.Series, benchmark: pd.Series | None = None) -> dict:
     returns = returns.dropna()
     equity = (1 + returns).cumprod()
@@ -110,7 +127,8 @@ def performance(returns: pd.Series, benchmark: pd.Series | None = None) -> dict:
 def run(top_n: int, score_columns: list[str], cost_bps: float):
     symbols = eligible_symbols(list_symbols("scores"))
     scores = load_scores()
-    scores = scores[scores["symbol"].isin(symbols)]
+    scores = filter_members(scores[scores["symbol"].isin(symbols)])
+    print_coverage(scores)
     benchmark_for = sector_benchmarks(symbols)
     etfs = sorted(set(benchmark_for) - {"SPY"})
     forward = forward_returns(symbols + BENCHMARKS + etfs, pd.DatetimeIndex(sorted(scores["as_of"].unique())))
@@ -124,7 +142,7 @@ def run(top_n: int, score_columns: list[str], cost_bps: float):
         {
             **{f"top{top_n}_{c}": r["strategy"] for c, r in results.items()},
             **({f"top{top_n}_{c}_sector_matched": r["sector_benchmark"] for c, r in results.items()} if benchmark_for is not None else {}),
-            "equal_weight_universe": forward[symbols].mean(axis=1),
+            "equal_weight_universe": universe_returns(scores, forward),
             **{b: forward[b] for b in BENCHMARKS},
         }
     ).loc[index].dropna()

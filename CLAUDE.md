@@ -17,7 +17,7 @@ underspecified.
 ## Current state: V1.x
 
 `collector/` (incl. intraday), `quant/` (incl. `indicators.py`), `ai/research.py`, `dashboard/`, `publish/`
-and `scheduler/` are implemented and tested. Not built: `ai/rag.py`, the Open WebUI layer. Each package README says what exists.
+and `scheduler/` are implemented and tested. `assistant/` (Open WebUI chat endpoint) is implemented. Not built: `ai/rag.py`. Each package README says what exists.
 
 There is no database server. All storage is parquet (the Jetson works with
 parquet), in a Hive layout: `<dataset>/symbol=<TICKER>/<dataset>.parquet`.

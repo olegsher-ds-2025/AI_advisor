@@ -1,0 +1,13 @@
+# Run from the repo root on the Jetson: docker compose -f assistant/docker-compose.yml up -d --build
+services:
+  sher-advisor:
+    build:
+      context: ..
+      dockerfile: assistant/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8095:8090"
+    environment:
+      LLM_BASE_URL: http://10.0.0.20:8080
+    volumes:
+      - /storage/stock_market:/data:ro

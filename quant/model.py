@@ -1,5 +1,5 @@
 """Stage-2 scoring: LightGBM predicting 12-month forward excess return (vs the
-universe median) from cross-sectionally ranked factors, trained walk-forward.
+median of that month's index members) from cross-sectionally ranked factors, trained walk-forward.
 
 A model predicting month T only trains on months whose 12-month outcome was
 already realized by T, so no label ever looks past the prediction date.
@@ -10,6 +10,7 @@ Usage:
 import lightgbm as lgb
 import pandas as pd
 
+from collector.membership import filter_members
 from collector.store import list_symbols, read_symbol, upsert_symbol
 from quant.backtest import eligible_symbols, month_end_prices
 
@@ -21,9 +22,11 @@ PARAMS = dict(n_estimators=200, learning_rate=0.05, num_leaves=15, min_child_sam
 
 def load_dataset() -> pd.DataFrame:
     symbols = eligible_symbols(list_symbols("metrics"))
-    metrics = pd.concat([read_symbol("metrics", s) for s in symbols], ignore_index=True)
+    metrics = filter_members(pd.concat([read_symbol("metrics", s) for s in symbols], ignore_index=True))
     prices = month_end_prices(symbols, pd.DatetimeIndex(sorted(metrics["as_of"].unique())))
     forward = prices.shift(-HORIZON) / prices - 1
+    is_member = metrics.assign(member=True).pivot(index="as_of", columns="symbol", values="member").reindex_like(forward).notna()
+    forward = forward.where(is_member)
     excess = forward.sub(forward.median(axis=1), axis=0)
     labels = excess.stack().rename("target").rename_axis(["as_of", "symbol"]).reset_index()
 

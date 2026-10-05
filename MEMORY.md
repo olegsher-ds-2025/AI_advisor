@@ -7,7 +7,7 @@ Last updated: 2026-10-05
 
 ## Where things stand
 
-V1.x implemented and tested. Last commit: `b746c4a` (items 1-3, pushed to origin/main; the branch is `main`, there is no `master`).
+V1.x implemented and tested. Last commit: `bdd4c0b` (branch is `main`, there is no `master`). **Uncommitted** (all verified, 37 tests pass): item 4 code (`collector/membership.py`, filters in model/backtest, sec_facts all concepts, empty-facts guard, scheduler steps) and item 7 (`assistant/`, `tests/test_assistant.py`, `tests/test_membership.py`).
 
 ## Environment facts (verified 2026-10-05)
 
@@ -31,25 +31,17 @@ V1.x implemented and tested. Last commit: `b746c4a` (items 1-3, pushed to origin
        and `publish/build.py` labels. Checked on AAPL/MSFT/NVDA/JPM (banks have no gross profit: NaN).
 2. [x] Transaction costs: `--cost-bps` (default 10) in `quant/backtest.py`.
 3. [x] Sector-ETF benchmark (`*_sector_matched` column), needs SPDR ETF prices + universe sectors.
-4. [ ] Survivorship bias: needs a point-in-time index-membership source (not chosen).
-5. [~] ML score: rank IC now 0.040 with long history; still survivorship-flattered.
+4. [x] Survivorship bias, partly: membership spells (fja05680/sp500) filter model+backtest to index members at each date; 352 ex-members since 2009 are backfilled where SEC/yfinance have data (~30%), so scored share of members averages 77% (95% latest). Failed/acquired losers without data are still missing, so results remain somewhat optimistic. Final lake run: ML rank IC -0.009 (no skill); top-30 `total` 16.7% CAGR / Sharpe 1.19 vs SPY 14.5% / 1.03 and sector-matched 12.9%; `ml_score` 15.3% / 0.78.
+5. [ ] ML score has NO skill once membership is point-in-time (rank IC -0.009). Options: drop it from the site, or rework features/labels. `total` is the only score with any backtest edge.
 6. [ ] `ai/rag.py`: needs filing/transcript text in the lake first.
-7. [ ] Open WebUI layer over metrics/scores (container already on the Jetson).
+7. [x] Open WebUI layer: `assistant/` is an OpenAI-compatible endpoint (rule-based retrieval of scores/factors/research, forwards to llama.cpp). Deployed 2026-10-05 as container `assistant-sher-advisor-1` on the Jetson, host port 8095 (8090 is taken), code in `~/projects/sher_advisor_assistant` there (copied by rsync; redeploy the same way). STILL TO DO by the user: Open WebUI Admin > Settings > Connections > add `http://10.0.0.20:8095/v1`. Qwen2.5-3B answers are shallow; it has no tool calling.
 8. [x] Longer history: prices now `--period max` in the lake.
-
-## Last real run (2026-10-05, written to the lake's `advisor/`)
-
-sec_facts, max-history prices (back to ~2009), universe, financials, factors, scoring, model, backtest
-for all 495 symbols. ML rank IC 0.040 (positive 59% of months; was 0.005 on 5y of prices). Top-30
-backtest 2009-10 to 2026-09, 10 bps costs: `total` CAGR 19.1% / Sharpe 1.33, `ml_score` 35.7% / 1.34,
-SPY 14.5% / 1.03. Sector-matched benchmarks: total 13.2%, ml_score 15.3%. Survivorship bias inflates
-all of these, so treat the ML CAGR as not credible until item 4 is done.
 
 ## Next action
 
-Item 4 (point-in-time universe) is the main thing keeping the backtest from being trustworthy; it
-needs a membership source. Then 7 (Open WebUI). 8 is done as a manual run; `scheduler/jobs.py` still
-fetches only 1mo of prices and does not run `sec_facts` (add it as a step, e.g. weekly).
+Item 6 (RAG; needs filing text from EDGAR first), then decide on item 5. The user adds the Open WebUI
+connection by hand (item 7). The scheduler now runs membership, sec_facts and deploy steps; nothing
+schedules it (user runs it manually).
 
 ## Log
 

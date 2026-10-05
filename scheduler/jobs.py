@@ -1,4 +1,4 @@
-"""Daily pipeline: prices -> SEC facts -> financials -> factors -> scores -> ML scores -> research notes
+"""Daily pipeline: S&P 500 membership -> prices -> SEC facts -> financials -> factors -> scores -> ML scores -> research notes
 -> intraday bars for the watchlist -> static site build (build/site) -> deploy to gh-pages.
 
 Fundamentals are collected upstream on the Jetson (fundamentals/); the financials step
@@ -19,8 +19,7 @@ import time
 from pathlib import Path
 
 from ai import research
-from collector import financials, intraday, market, sec_facts
-from collector.store import source_symbols
+from collector import financials, intraday, market, membership, sec_facts
 from publish import build, deploy
 from quant import factors, model, scoring
 
@@ -30,9 +29,10 @@ PRICE_PERIOD = "1mo"  # upserts merge by date, so a short window keeps the daily
 
 def build_steps(research_top: int, watchlist_top: int) -> dict:
     return {
-        "prices": lambda: market.run(source_symbols(), PRICE_PERIOD),
-        "sec_facts": lambda: sec_facts.run(source_symbols()),
-        "financials": lambda: financials.run(source_symbols()),
+        "membership": membership.run,
+        "prices": lambda: market.run(membership.tracked_symbols(), PRICE_PERIOD),
+        "sec_facts": lambda: sec_facts.run(membership.tracked_symbols()),
+        "financials": lambda: financials.run(membership.tracked_symbols()),
         "factors": lambda: factors.run([]),
         "scoring": scoring.run,
         "model": model.run,

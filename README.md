@@ -17,10 +17,9 @@ Implemented, all on parquet with no database server:
 - `dashboard/` - Streamlit lists and company drill-down.
 - `scheduler/` - daily pipeline (cron line in the module docstring, not installed).
 
-Not built: `ai/rag.py`, point-in-time universe membership.
+Not built: `ai/rag.py`.
 
-Known limits: the universe is today's constituents (survivorship bias), the ML score has weak
-out-of-sample skill (rank IC ~0.04 on max-history prices), and the Qwen notes can misread scores, so check them against
+Known limits: backtests use point-in-time S&P 500 membership but only ~77% of members had data (delisted names are often missing), so results stay somewhat optimistic; the ML score has no out-of-sample skill (rank IC ~0), and the Qwen notes can misread scores, so check them against
 the numbers. Source fundamentals lack shares/debt/revenue for some symbols.
 
 ## Quickstart

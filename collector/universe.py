@@ -1,7 +1,7 @@
 """yfinance metadata per symbol (quote type, sector, industry), used to drop ETFs/funds from scoring.
 
 Usage:
-    python -m collector.universe            # every symbol in fundamentals/
+    python -m collector.universe            # lake symbols + ex-index members
     python -m collector.universe AAPL SPY
 """
 import argparse
@@ -9,7 +9,8 @@ import argparse
 import pandas as pd
 import yfinance as yf
 
-from collector.store import DATA_DIR, source_symbols
+from collector.membership import tracked_symbols
+from collector.store import DATA_DIR
 
 PATH = DATA_DIR / "universe" / "universe.parquet"
 FIELDS = {"quoteType": "quote_type", "sector": "sector", "industry": "industry", "longName": "name"}
@@ -29,7 +30,7 @@ def fetch(symbol: str) -> dict:
 
 
 def run(symbols: list[str]):
-    symbols = symbols or source_symbols()
+    symbols = symbols or tracked_symbols()
     fresh = pd.DataFrame([fetch(s.upper()) for s in symbols])
     if PATH.exists():
         fresh = pd.concat([pd.read_parquet(PATH), fresh]).drop_duplicates("symbol", keep="last")

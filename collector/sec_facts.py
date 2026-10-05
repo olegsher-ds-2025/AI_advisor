@@ -1,8 +1,10 @@
-"""Fetches the concepts missing from the lake's fundamentals/ facts straight from SEC companyfacts
-and stores them in the same long format as advisor/facts_extra/, which collector.financials merges in.
+"""Fetches every concept collector.financials maps straight from SEC companyfacts and stores them in
+the same long format as advisor/facts_extra/, which collector.financials merges with the lake's
+fundamentals/ facts. It covers what the lake lacks (cash flow, gross profit, operating income) and
+the delisted ex-index members from collector.membership, which the lake never collected.
 
 Usage:
-    python -m collector.sec_facts              # every symbol with facts in the lake
+    python -m collector.sec_facts              # lake symbols + ex-index members
     python -m collector.sec_facts AAPL MSFT
 """
 import argparse
@@ -12,19 +14,14 @@ import urllib.request
 
 import pandas as pd
 
-from collector.store import source_symbols, upsert_symbol
+from collector.financials import CONCEPT_MAP
+from collector.membership import tracked_symbols
+from collector.store import upsert_symbol
 
 USER_AGENT = "Oleg Sher olegsher-ds-2025@sher.biz"
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
-CONCEPTS = [
-    "GrossProfit",
-    "OperatingIncomeLoss",
-    "NetCashProvidedByUsedInOperatingActivities",
-    "PaymentsForCapitalExpenditures",
-    "PaymentsToAcquirePropertyPlantAndEquipment",
-    "PaymentsToAcquireProductiveAssets",
-]
+CONCEPTS = list(CONCEPT_MAP)
 FORMS = {"10-K", "10-K/A", "10-Q", "10-Q/A"}
 KEYS = ["concept", "period_start", "period_end", "accession_no"]
 REQUEST_GAP_SECONDS = 0.15  # SEC allows 10 requests/s
@@ -68,6 +65,9 @@ def run(symbols: list[str]):
         except OSError as error:
             print(f"[sec_facts] {symbol}: {error}, skipping")
             continue
+        if facts.empty:
+            print(f"[sec_facts] {symbol}: no us-gaap facts (foreign filer?), skipping")
+            continue
         path = upsert_symbol("facts_extra", symbol, facts, KEYS)
         print(f"[sec_facts] {symbol}: {len(facts)} facts -> {path}")
         time.sleep(REQUEST_GAP_SECONDS)
@@ -76,4 +76,4 @@ def run(symbols: list[str]):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("symbols", nargs="*")
-    run(parser.parse_args().symbols or source_symbols())
+    run(parser.parse_args().symbols or tracked_symbols())
