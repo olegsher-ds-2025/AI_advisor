@@ -37,6 +37,10 @@ V1.x implemented and tested. Last commit: `64f8237` (branch is `main`, there is 
 7. [x] Open WebUI layer: `assistant/` is an OpenAI-compatible endpoint (rule-based retrieval of scores/factors/research, forwards to llama.cpp). Deployed 2026-10-05 as container `assistant-sher-advisor-1` on the Jetson, host port 8095 (8090 is taken), code in `~/projects/sher_advisor_assistant` there (copied by rsync; redeploy the same way). STILL TO DO by the user: Open WebUI Admin > Settings > Connections > add `http://10.0.0.20:8095/v1`. Qwen2.5-3B answers are shallow; it has no tool calling.
 8. [x] Longer history: prices now `--period max` in the lake.
 
+## News (checked 2026-10-05)
+
+`news/` in the lake is thin: 5,235 IB_NEWS headlines, 484 symbols (~11 each), almost all since 2024-08 (dense only from 2025-07), no bodies, a gap 2026-03-06 to 2026-06-22. About 74% are broker actions (upgraded/downgraded/initiated/reiterated with target price). Headlines carry a `{A:..:K:<sentiment>:C:..}` tag; `collector.store.clean_news` strips it and exposes `sentiment` (only ~45% have one). Too short and sparse for a news factor in the 12-month model. Used instead in `assistant/` (recent headlines + 180-day broker action counts) and, now cleaned, in research notes. Other lake folders (processed intraday bars, accumulation, engulfing, ...) are still unused; see the survey in the chat: processed/ has 5s-style bars for 549 symbols since 2025-08, accumulation/ has features/scores/labels (not inspected for point-in-time safety).
+
 ## Next action
 
 Decide on item 5 (ML has no skill) and whether to add a filings step to the scheduler. The user adds the Open WebUI

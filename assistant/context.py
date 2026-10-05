@@ -11,7 +11,7 @@ from functools import lru_cache
 import pandas as pd
 
 from ai.rag import retrieve
-from collector.store import list_symbols, read_symbol
+from collector.store import list_symbols, read_all_news, read_symbol
 from quant.scoring import CATEGORIES
 
 RANKINGS = [*CATEGORIES, "total", "ml_score"]
@@ -20,6 +20,9 @@ MAX_SYMBOLS = 3
 EXCERPTS_TOTAL = 4  # filing chunks per question, split across the symbols asked about
 CACHE_SECONDS = 300
 DELTA_MONTHS = 3
+NEWS_LINES = 8
+ANALYST_DAYS = 180
+ANALYST_ACTIONS = {"upgraded": "upgrades", "downgraded": "downgrades", "initiated": "initiations"}
 STALE_DAYS = 10  # delisted ex-members keep their last score; they must not appear in rankings
 TICKER = re.compile(r"\$?\b([A-Z]{1,5}(?:[.-][A-Z])?)\b")
 TOP_WORDS = re.compile(r"\b(top|best|highest|cheapest|strongest|leaders?|rank(?:ing)?|shortlist|screen)\b", re.I)
@@ -42,6 +45,26 @@ def _latest_cached(bucket: int) -> pd.DataFrame:
         rows.append(latest)
     latest = pd.concat(rows, ignore_index=True)
     return latest[latest["as_of"] >= latest["as_of"].max() - pd.Timedelta(days=STALE_DAYS)]
+
+
+@lru_cache(maxsize=1)
+def _news_cached(bucket: int) -> pd.DataFrame:
+    return read_all_news()
+
+
+def news_context(symbol: str) -> str:
+    news = _news_cached(int(time.time() // CACHE_SECONDS))
+    news = news[news["symbol"] == symbol]
+    if news.empty:
+        return ""
+    recent = news[pd.to_datetime(news["published_at"]) >= pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=ANALYST_DAYS)]
+    counts = {label: int(recent["headline"].str.contains(word, case=False).sum()) for word, label in ANALYST_ACTIONS.items()}
+    lines = [
+        f"- {r.published_at[:10]} {r.headline}" + (f" (provider sentiment {r.sentiment:+.2f})" if pd.notna(r.sentiment) else "")
+        for r in news.tail(NEWS_LINES).iloc[::-1].itertuples()
+    ]
+    summary = ", ".join(f"{n} {label}" for label, n in counts.items())
+    return f"\nBroker headlines (last {ANALYST_DAYS} days: {summary}; newest first):\n" + "\n".join(lines)
 
 
 def latest_scores() -> pd.DataFrame:
@@ -93,7 +116,7 @@ def symbol_context(symbol: str, question: str = "", excerpts: int = 0) -> str:
         note = research.sort_values("as_of").iloc[-1]
         parts = [f"{f}: {note[f]}" for f in ("thesis", "bull_case", "bear_case", "risks", "contradictions") if pd.notna(note[f])]
         text += f"\nLLM research note (draft, as of {note['as_of'].date()}):\n" + "\n".join(parts)
-    return text + (filing_excerpts(symbol, question, excerpts) if excerpts else "")
+    return text + news_context(symbol) + (filing_excerpts(symbol, question, excerpts) if excerpts else "")
 
 
 def ranking_context(category: str, n: int = DEFAULT_TOP) -> str:

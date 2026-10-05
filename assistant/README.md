@@ -7,7 +7,7 @@ For each question `context.py` decides what to look up and `app.py` puts it in t
 (`prompts/system.md`) before forwarding to the llama.cpp backend (`LLM_BASE_URL`):
 
 - tickers written in capitals (`$A` for one-letter ones) -> that symbol's latest scores with the
-  3-month change, factors, latest research note and up to 4 matching filing excerpts (`ai/rag.py`) split across the symbols (up to 3);
+  3-month change, factors, latest research note and up to 8 recent broker headlines (with 180-day upgrade/downgrade/initiation counts and the provider's sentiment where given) and up to 4 matching filing excerpts (`ai/rag.py`) split across the symbols (up to 3);
 - otherwise a top-10 table by the category named in the question (value, quality, growth, momentum,
   risk, ml) or by total.
 

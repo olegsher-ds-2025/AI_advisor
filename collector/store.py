@@ -1,5 +1,7 @@
 """Parquet storage in a Hive layout: <dataset>/symbol=<TICKER>/<dataset>.parquet"""
+import html
 import os
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -45,7 +47,25 @@ def upsert_symbol(dataset: str, symbol: str, df: pd.DataFrame, keys: list[str]) 
     return path
 
 
+NEWS_PREFIX = re.compile(r"^\{[^}]*\}!?")
+NEWS_SENTIMENT = re.compile(r"K:(-?\d+(?:\.\d+)?)")
+
+
+def clean_news(news: pd.DataFrame) -> pd.DataFrame:
+    """IB_NEWS headlines start with a `{A:..:K:<sentiment>:C:<confidence>}` tag (usually followed by `!`); split it off into `sentiment`
+    (NaN when the provider gave none), unescape HTML and drop empty headlines."""
+    tag = news["headline"].str.extract(NEWS_SENTIMENT)[0].astype(float)
+    headline = news["headline"].str.replace(NEWS_PREFIX, "", regex=True).map(html.unescape).str.strip()
+    return news.assign(headline=headline, sentiment=tag)[headline != ""]
+
+
 def read_news(symbol: str, days: int = 30) -> pd.DataFrame:
+    """Cleaned headlines of the last `days` daily partitions (not calendar days; partitions skip non-trading days)."""
     partitions = sorted((SOURCE_DIR / "news").glob("date=*"))[-days:]
     frames = [pd.read_parquet(p / "items.parquet", filters=[("symbol", "==", symbol)]) for p in partitions]
-    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=["published_at", "headline"])
+    return clean_news(pd.concat(frames, ignore_index=True)) if frames else pd.DataFrame(columns=["published_at", "headline", "sentiment"])
+
+
+def read_all_news() -> pd.DataFrame:
+    frames = [pd.read_parquet(p / "items.parquet") for p in sorted((SOURCE_DIR / "news").glob("date=*"))]
+    return clean_news(pd.concat(frames, ignore_index=True)).sort_values("published_at")

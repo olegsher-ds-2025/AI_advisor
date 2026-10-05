@@ -87,3 +87,23 @@ def test_symbol_question_includes_matching_filing_excerpts(lake):
     text = context.build_context("What outage risks does MSFT mention?")
 
     assert "[10-K filed 2025-07-30, Item 1A] Cloud outages could harm customers." in text
+
+
+def test_symbol_question_includes_broker_headlines_with_counts(lake, monkeypatch):
+    now = pd.Timestamp.now(tz="UTC")
+    news = pd.DataFrame({
+        "symbol": ["MSFT", "MSFT", "AAPL"],
+        "published_at": [(now - pd.Timedelta(days=20)).isoformat(), (now - pd.Timedelta(days=5)).isoformat(), now.isoformat()],
+        "headline": ["{A:1:L:en:K:0.97:C:0.9}!UBS upgraded Microsoft (MSFT) to Buy", "Barclays downgraded Microsoft (MSFT) to Hold", "other"],
+    })
+    news_dir = lake / "news" / "date=2026-01-01"
+    news_dir.mkdir(parents=True)
+    news.to_parquet(news_dir / "items.parquet")
+    monkeypatch.setattr(store, "SOURCE_DIR", lake)
+    context._news_cached.cache_clear()
+
+    text = context.build_context("How is MSFT doing?")
+
+    assert "1 upgrades, 1 downgrades, 0 initiations" in text
+    assert "UBS upgraded Microsoft (MSFT) to Buy (provider sentiment +0.97)" in text
+    assert text.index("Barclays") < text.index("UBS") and "other" not in text
