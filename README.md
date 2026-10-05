@@ -1,5 +1,6 @@
 # Sher Stock Advisor AI
 
+
 A personal, locally-run stock research system: screen ~5,000 US stocks down to a
 shortlist using fundamentals, score and backtest the result, then use a local LLM
 (Qwen on a Jetson) to generate research notes. This is a research tool, not a
