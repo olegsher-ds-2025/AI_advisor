@@ -1,0 +1,22 @@
+# Weekly pipeline on the Jetson. From the repo root:
+#   docker compose -f scheduler/docker-compose.yml run --rm pipeline [--steps ...]
+# The lake is read-only except advisor/, which the pipeline owns.
+services:
+  pipeline:
+    build:
+      context: ..
+      dockerfile: scheduler/Dockerfile
+    mem_limit: 2g
+    environment:
+      STOCK_MARKET_DIR: /data
+      LLM_BASE_URL: http://10.0.0.20:8080
+      DEPLOY_REMOTE: git@github.com:olegsher-ds-2025/AI_advisor.git
+      GIT_SSH_COMMAND: ssh -i /run/deploy_key -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/known_hosts
+      GIT_AUTHOR_NAME: Oleg Sher
+      GIT_AUTHOR_EMAIL: olegsher-ds-2025@sher.biz
+      GIT_COMMITTER_NAME: Oleg Sher
+      GIT_COMMITTER_EMAIL: olegsher-ds-2025@sher.biz
+    volumes:
+      - /storage/stock_market:/data:ro
+      - /storage/stock_market/advisor:/data/advisor
+      - ${DEPLOY_KEY:-../deploy_key}:/run/deploy_key:ro

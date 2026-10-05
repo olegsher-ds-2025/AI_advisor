@@ -11,7 +11,9 @@ from quant.scoring import CATEGORIES
 @pytest.fixture
 def lake(tmp_path, monkeypatch):
     monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(store, "SOURCE_DIR", tmp_path)
     context._latest_cached.cache_clear()
+    context._news_cached.cache_clear()
     dates = pd.date_range("2024-01-31", periods=6, freq="ME")
     for i, symbol in enumerate(["AAPL", "MSFT", "A"]):
         scores = pd.DataFrame({"symbol": symbol, "as_of": dates, **{c: 50.0 + 10 * i for c in CATEGORIES}, "total": 50.0 + 10 * i})
@@ -99,8 +101,6 @@ def test_symbol_question_includes_broker_headlines_with_counts(lake, monkeypatch
     news_dir = lake / "news" / "date=2026-01-01"
     news_dir.mkdir(parents=True)
     news.to_parquet(news_dir / "items.parquet")
-    monkeypatch.setattr(store, "SOURCE_DIR", lake)
-    context._news_cached.cache_clear()
 
     text = context.build_context("How is MSFT doing?")
 

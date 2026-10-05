@@ -2,12 +2,13 @@
 
 History is deliberately discarded: the site is regenerated data, and keeping every daily
 snapshot would bloat the repo. Only gh-pages is ever force-pushed, never main. GitHub Pages
-must be set to serve the gh-pages branch.
+must be set to serve the gh-pages branch. `DEPLOY_REMOTE` overrides the origin URL (the scheduler container has no .git).
 
 Usage:
     python -m publish.build && python -m publish.deploy
 """
 import argparse
+import os
 import shutil
 import subprocess
 import tempfile
@@ -22,7 +23,7 @@ def git(cwd: Path, *args: str) -> str:
 
 
 def deploy(site: Path):
-    remote = git(REPO, "remote", "get-url", "origin")
+    remote = os.environ.get("DEPLOY_REMOTE") or git(REPO, "remote", "get-url", "origin")
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp) / "site"
         shutil.copytree(site, work)

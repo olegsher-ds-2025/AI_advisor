@@ -34,7 +34,7 @@ V1.x implemented and tested. Last commit: `64f8237` (branch is `main`, there is 
 4. [x] Survivorship bias, partly: membership spells (fja05680/sp500) filter model+backtest to index members at each date; 352 ex-members since 2009 are backfilled where SEC/yfinance have data (~30%), so scored share of members averages 77% (95% latest). Failed/acquired losers without data are still missing, so results remain somewhat optimistic. Final lake run: ML rank IC -0.009 (no skill); top-30 `total` 16.7% CAGR / Sharpe 1.19 vs SPY 14.5% / 1.03 and sector-matched 12.9%; `ml_score` 15.3% / 0.78.
 5. [ ] ML score has NO skill once membership is point-in-time (rank IC -0.009). Options: drop it from the site, or rework features/labels. `total` is the only score with any backtest edge.
 6. [x] RAG: `collector/filings.py` (latest 10-K/10-Q narrative items -> `advisor/filings/`, 486/495 symbols; 9 skipped: no CIK or no text), `ai/rag.py` (TF-IDF per symbol), used by `assistant/`. Assistant redeployed on the Jetson with it and tested on AAPL tariffs. Filings are not refreshed by `scheduler.jobs` yet (add a step if wanted); research notes don't use rag.
-7. [x] Open WebUI layer: `assistant/` is an OpenAI-compatible endpoint (rule-based retrieval of scores/factors/research, forwards to llama.cpp). Deployed 2026-10-05 as container `assistant-sher-advisor-1` on the Jetson, host port 8095 (8090 is taken), code in `~/projects/sher_advisor_assistant` there (copied by rsync; redeploy the same way). STILL TO DO by the user: Open WebUI Admin > Settings > Connections > add `http://10.0.0.20:8095/v1`. Qwen2.5-3B answers are shallow; it has no tool calling.
+7. [x] Open WebUI layer: `assistant/` is an OpenAI-compatible endpoint (rule-based retrieval of scores/factors/research, forwards to llama.cpp). Deployed 2026-10-05 as container `assistant-sher-advisor-1` on the Jetson, host port 8095 (8090 is taken), code in `~/projects/sher_advisor_assistant` there (copied by rsync; redeploy the same way). The user added the connection `http://10.0.0.20:8095/v1` in Open WebUI and confirmed it works (2026-10-05). Qwen2.5-3B answers are shallow; it has no tool calling.
 8. [x] Longer history: prices now `--period max` in the lake.
 
 ## News (checked 2026-10-05)
@@ -45,10 +45,14 @@ V1.x implemented and tested. Last commit: `64f8237` (branch is `main`, there is 
 
 `scorecard/` (checked 2026-10-05): the other system's live paper-trading ledger, 2026-07-27..2026-10-02, 3,053 recommendations (accumulation 980, oem 961, gainers 492, candidates 352, indicator_models 215, levered 42, pairs 11), with TP/SL bracket outcomes at h1/h5/h20. Resolved h20 bracket net return: accumulation -1.0% (hit 31%, its own leaderboard t -3.1), candidates -1.4%, gainers -1.9%, oem -0.5%, indicator_models +3.6% (hit 43%, n=184), levered +1.6% (n=42). So the accumulation module that looked good in backtest (AUC 0.78) loses live, matching our no-factor finding. Our `total` top-30 over the same window (2 month-end cross-sections, 20 sessions): Jul +0.5% vs universe +2.8%, Aug -5.4% vs -4.4%, i.e. behind both times; far too short to conclude anything (the 2009-2026 backtest is the evidence). No comparison of picks is meaningful at this sample size; revisit after ~6+ months of ledger.
 
+## Jetson pipeline container (in progress, 2026-10-05)
+
+`scheduler/Dockerfile` + `scheduler/docker-compose.yml` (mem 2g, lake read-only except `advisor/`, entrypoint `scheduler.jobs`, new `filings` step, `DEPLOY_REMOTE` env for `publish.deploy`). Repo copied to `~/projects/sher_advisor_pipeline` on the Jetson (rsync, no .git), image built there; `--steps site` works (136 s). A one-off run of every step except deploy was started in the background, log `~/projects/sher_advisor_pipeline/run_test.log` (check memory and duration). Use `DEPLOY_KEY=/dev/null` for runs without deploy, otherwise compose creates a directory named `deploy_key`.
+NOT DONE (blocked, needs the user): (1) a GitHub deploy key with write access for the Jetson (`~/projects/sher_advisor_pipeline/deploy_key`; generate there with ssh-keygen, add via `gh repo deploy-key add ... --allow-write`); the auto-mode classifier denied me creating it; (2) the weekly crontab entry on the Jetson, e.g. `0 2 * * 0 cd ~/projects/sher_advisor_pipeline && flock -n /tmp/sher_pipeline.lock docker compose -f scheduler/docker-compose.yml run --rm pipeline >> run.log 2>&1`. Until both exist, `deploy` can't run from the Jetson.
+
 ## Next action
 
-Decide on item 5 (ML has no skill) and whether to add a filings step to the scheduler. The user adds the Open WebUI
-connection by hand (item 7). The scheduler now runs membership, sec_facts and deploy steps; nothing
+Decide on item 5 (ML has no skill) and whether to add a filings step to the scheduler. The scheduler now runs membership, sec_facts and deploy steps; nothing
 schedules it (user runs it manually).
 
 ## Log

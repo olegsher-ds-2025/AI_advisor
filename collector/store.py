@@ -68,4 +68,6 @@ def read_news(symbol: str, days: int = 30) -> pd.DataFrame:
 
 def read_all_news() -> pd.DataFrame:
     frames = [pd.read_parquet(p / "items.parquet") for p in sorted((SOURCE_DIR / "news").glob("date=*"))]
+    if not frames:
+        return pd.DataFrame(columns=["symbol", "published_at", "headline", "sentiment"])
     return clean_news(pd.concat(frames, ignore_index=True)).sort_values("published_at")
