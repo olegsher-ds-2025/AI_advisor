@@ -1,5 +1,5 @@
-"""Daily pipeline: prices -> financials -> factors -> scores -> ML scores -> research notes
--> intraday bars for the watchlist -> static site build (build/site).
+"""Daily pipeline: prices -> SEC facts -> financials -> factors -> scores -> ML scores -> research notes
+-> intraday bars for the watchlist -> static site build (build/site) -> deploy to gh-pages.
 
 Fundamentals are collected upstream on the Jetson (fundamentals/); the financials step
 only rebuilds from whatever is there. Steps run in order and the first failure stops the
@@ -19,9 +19,9 @@ import time
 from pathlib import Path
 
 from ai import research
-from collector import financials, intraday, market
+from collector import financials, intraday, market, sec_facts
 from collector.store import source_symbols
-from publish import build
+from publish import build, deploy
 from quant import factors, model, scoring
 
 log = logging.getLogger("scheduler")
@@ -31,6 +31,7 @@ PRICE_PERIOD = "1mo"  # upserts merge by date, so a short window keeps the daily
 def build_steps(research_top: int, watchlist_top: int) -> dict:
     return {
         "prices": lambda: market.run(source_symbols(), PRICE_PERIOD),
+        "sec_facts": lambda: sec_facts.run(source_symbols()),
         "financials": lambda: financials.run(source_symbols()),
         "factors": lambda: factors.run([]),
         "scoring": scoring.run,
@@ -38,6 +39,7 @@ def build_steps(research_top: int, watchlist_top: int) -> dict:
         "research": lambda: research.run(research.top_symbols(research_top)),
         "intraday": lambda: intraday.run(research.top_symbols(watchlist_top)),
         "site": lambda: build.build(Path("build/site")),
+        "deploy": lambda: deploy.deploy(Path("build/site")),
     }
 
 
