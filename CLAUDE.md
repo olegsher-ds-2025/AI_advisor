@@ -17,7 +17,7 @@ underspecified.
 ## Current state: V1.x
 
 `collector/` (incl. intraday), `quant/` (incl. `indicators.py`), `ai/research.py`, `dashboard/`, `publish/`
-and `scheduler/` are implemented and tested. `assistant/` (Open WebUI chat endpoint) is implemented. Not built: `ai/rag.py`. Each package README says what exists.
+and `scheduler/` are implemented and tested. `assistant/` (Open WebUI chat endpoint) is implemented. `ai/rag.py` retrieves filing text for it. Each package README says what exists.
 
 There is no database server. All storage is parquet (the Jetson works with
 parquet), in a Hive layout: `<dataset>/symbol=<TICKER>/<dataset>.parquet`.
@@ -30,6 +30,7 @@ source .venv/bin/activate
 
 python -m collector.sec_facts [TICKER ...]            # SEC companyfacts: OCF/capex/gross profit/op income -> advisor/facts_extra/
 python -m collector.financials TICKER [TICKER ...]    # fundamentals/ + facts_extra/ -> advisor/financials/
+python -m collector.filings [TICKER ...]              # latest 10-K/10-Q text chunks -> advisor/filings/
 python -m collector.market TICKER [...] --period 5y   # yfinance prices -> advisor/prices/
 
 python -m quant.factors [TICKER ...]                  # financials + prices -> advisor/metrics/

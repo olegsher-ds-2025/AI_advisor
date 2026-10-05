@@ -77,3 +77,13 @@ def test_chat_injects_context_and_forwards_to_the_backend(lake, monkeypatch):
     assert [m["role"] for m in sent["body"]["messages"]] == ["system", "user"]
     assert "## MSFT" in sent["body"]["messages"][0]["content"]
     assert "client" not in sent["body"]["messages"][0]["content"]
+
+
+def test_symbol_question_includes_matching_filing_excerpts(lake):
+    rows = pd.DataFrame({"symbol": "MSFT", "accn": "a", "form": "10-K", "filed": pd.Timestamp("2025-07-30"), "item": ["1A"], "chunk": [0],
+                         "text": ["Cloud outages could harm customers."]})
+    store.upsert_symbol("filings", "MSFT", rows, ["accn", "chunk"])
+
+    text = context.build_context("What outage risks does MSFT mention?")
+
+    assert "[10-K filed 2025-07-30, Item 1A] Cloud outages could harm customers." in text

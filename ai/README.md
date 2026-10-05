@@ -11,4 +11,4 @@ Inference only, against a llama.cpp server on the Jetson Orin Nano (OpenAI-compa
 - `prompts/research.md` - the prompt. It forbids buy/sell advice and outside facts, and
   states that every score is higher-is-better. The current Qwen still misreads scores
   and adds claims now and then, so notes are drafts to check against the numbers.
-- Not built: `rag.py` (filing/transcript retrieval). There is no filing text in the lake yet.
+- `rag.py` - TF-IDF retrieval over one company's filing chunks (`advisor/filings/`, from `python -m collector.filings`: latest 10-K and 10-Q, items 1/1A/7/7A and 2). Used by `assistant/` for ticker questions; research notes do not use it yet. Not built: transcripts, embeddings, a refresh schedule for filings.

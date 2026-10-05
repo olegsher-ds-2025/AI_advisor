@@ -10,12 +10,14 @@ from functools import lru_cache
 
 import pandas as pd
 
+from ai.rag import retrieve
 from collector.store import list_symbols, read_symbol
 from quant.scoring import CATEGORIES
 
 RANKINGS = [*CATEGORIES, "total", "ml_score"]
 DEFAULT_TOP = 10
 MAX_SYMBOLS = 3
+EXCERPTS_TOTAL = 4  # filing chunks per question, split across the symbols asked about
 CACHE_SECONDS = 300
 DELTA_MONTHS = 3
 STALE_DAYS = 10  # delisted ex-members keep their last score; they must not appear in rankings
@@ -68,7 +70,13 @@ def _fmt(value, fmt="{:.2f}") -> str:
     return fmt.format(value) if pd.notna(value) else "n/a"
 
 
-def symbol_context(symbol: str) -> str:
+def filing_excerpts(symbol: str, question: str, k: int) -> str:
+    found = retrieve(symbol, question, k)
+    lines = [f"[{r.form} filed {r.filed.date()}, Item {r.item}] {r.text}" for r in found.itertuples()]
+    return "\nFiling excerpts matching the question:\n" + "\n".join(lines) if lines else ""
+
+
+def symbol_context(symbol: str, question: str = "", excerpts: int = 0) -> str:
     scores = read_symbol("scores", symbol).sort_values("as_of")
     metrics = read_symbol("metrics", symbol).sort_values("as_of").iloc[-1]
     latest = scores.iloc[-1]
@@ -85,7 +93,7 @@ def symbol_context(symbol: str) -> str:
         note = research.sort_values("as_of").iloc[-1]
         parts = [f"{f}: {note[f]}" for f in ("thesis", "bull_case", "bear_case", "risks", "contradictions") if pd.notna(note[f])]
         text += f"\nLLM research note (draft, as of {note['as_of'].date()}):\n" + "\n".join(parts)
-    return text
+    return text + (filing_excerpts(symbol, question, excerpts) if excerpts else "")
 
 
 def ranking_context(category: str, n: int = DEFAULT_TOP) -> str:
@@ -100,6 +108,7 @@ def ranking_context(category: str, n: int = DEFAULT_TOP) -> str:
 def build_context(question: str) -> str:
     symbols = find_symbols(question, set(list_symbols("scores")))
     if symbols:
-        return "\n\n".join(symbol_context(s) for s in symbols)
+        per_symbol = -(-EXCERPTS_TOTAL // len(symbols))
+        return "\n\n".join(symbol_context(s, question, per_symbol) for s in symbols)
     category = find_category(question)
     return ranking_context(category) if TOP_WORDS.search(question) or category != "total" else ranking_context("total")
