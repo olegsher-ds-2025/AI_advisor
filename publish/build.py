@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from collector.intraday import dataset as intraday_dataset
-from collector.store import list_symbols, read_symbol
+from collector.store import list_symbols, read_symbol, source_symbols
 from collector.universe import read_universe
 from quant import indicators
 from quant.scoring import CATEGORIES
@@ -186,7 +186,8 @@ def index_rows(frames: dict[str, pd.DataFrame], universe: pd.DataFrame) -> list[
 def build(out: Path):
     universe = read_universe()
     universe = universe[universe["quote_type"] == "EQUITY"].set_index("symbol")
-    symbols = [s for s in list_symbols("scores") if s in universe.index]
+    lake = set(source_symbols())  # the delisted ex-members backfilled for backtests are not part of the screen
+    symbols = [s for s in list_symbols("scores") if s in universe.index and s in lake]
     frames = {s: read_symbol("scores", s) for s in symbols}
     frames = {s: df for s, df in frames.items() if len(df) > DELTA_MONTHS}
     symbols = list(frames)
