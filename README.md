@@ -19,8 +19,8 @@ Implemented, all on parquet with no database server:
 
 Not built: `ai/rag.py`, point-in-time universe membership.
 
-Known limits: the universe is today's constituents (survivorship bias), the ML score shows no
-out-of-sample skill (rank IC ~0.005), and the Qwen notes can misread scores, so check them against
+Known limits: the universe is today's constituents (survivorship bias), the ML score has weak
+out-of-sample skill (rank IC ~0.04 on max-history prices), and the Qwen notes can misread scores, so check them against
 the numbers. Source fundamentals lack shares/debt/revenue for some symbols.
 
 ## Quickstart
