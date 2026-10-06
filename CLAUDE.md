@@ -44,6 +44,8 @@ python -m publish.build                               # static GitHub Pages site
 streamlit run dashboard/app.py
 python -m scheduler.jobs                              # whole daily pipeline
 
+python -m fool.ingest && python -m fool.prices && python -m fool.combine  # Motley Fool picks -> advisor/fool/recs.parquet (see fool/README.md)
+
 pytest tests/
 ```
 
