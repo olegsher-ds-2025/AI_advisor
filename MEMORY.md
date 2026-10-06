@@ -59,6 +59,7 @@ Pitfalls found: `quant/factors.py` values with a split-adjusted close against as
 ### Unfinished (resume here)
 - Tiingo split refetch for delisted picks (~77 symbols, hourly cap): started in background, may not have finished. Rerun `python -m fool.prices` (everything cached, resumes), then `python -m fool.features`, `python -m fool.classifier`, `python -m fool.report`. Until then `fool.pit` leaves valuation NaN for those names on purpose. Remaining unresolved price symbols are listed in `fool/README.md`.
 - Finish training: add a prior-pick feature (35% of BUYs repeat an earlier pick; reported separately since it is habit, not criteria), evaluate on the whole lake universe per month with top-20/top-50 hit rate, per-analyst models (David vs Tom), then pick the final model and save it. Text/news features are the only route to the "why".
+- Use pandas-ta for the indicator features (RSI, MACD, Bollinger width, ATR, stochastic...) in the Fool model (decided 2026-10-06). First check it installs and runs on Python 3.14 with current pandas/numpy (if not, try a maintained fork or ta-lib), compare its SMA/momentum output with the hand-written ones in `fool/features.py`, add it to `requirements.txt`, and compute indicators only on data up to `rec_date` (no lookahead).
 - Decide whether to fix `quant/factors.py` splits.
 
 ## Next action
